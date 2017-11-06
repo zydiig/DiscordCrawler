@@ -19,6 +19,7 @@ def check_attachment(x):
     path=root / x["local_filename"]
     if not path.exists():
         print("!!!MISSING FILE!!!")
+        return
     local_size = stat(path).st_size
     remote_size = x["size"]
     if local_size != remote_size:
@@ -29,8 +30,8 @@ for x in attachments.find():
     check_attachment(x)
 
 print("===========")
-print("Incosistent size")
+print("Inconsistent size")
 
-for x in messages.find():
+for x in messages.find({"attachments":{"$ne":[]}}):
     for a in x["attachments"]:
         check_attachment(attachments.find_one({"id": a["id"]}))
