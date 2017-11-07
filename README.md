@@ -15,6 +15,7 @@ Dependencies
 
 Configuration
 -------------
+Sample configuration file below.
 ~~~
 {
   "user": {
@@ -40,4 +41,4 @@ Configuration
   }
 }
 ~~~
-Copy and save it as `discord.json`. The script expects the config file placed in the current working directory (`$PWD`).
+Copy and save it as `discord.json`. The script expects the config file in the current working directory (`$PWD`).

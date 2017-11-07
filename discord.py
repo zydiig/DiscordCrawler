@@ -112,7 +112,7 @@ class AttachmentFetcher(Thread):
                 if 'url' in attachment and 'filename' in attachment:
                     local_filename = get_random_string(20) + Path(attachment["filename"]).suffix
                     with open(self.root / local_filename, "wb") as f:
-                        f.write(self.session.get(attachment["proxy_url"], timeout=10).content)
+                        f.write(self.session.get(attachment["url"], timeout=10).content)
                     attachment["local_filename"] = local_filename
                     self.db.attachments.insert_one(attachment)
                 else:
