@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{server_name}} - {{ channel_info["name"] }}</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="/static/js/jquery-3.2.1.min.js"></script>
+    <script src="/static/js/popper.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <style>
+        .bold-label {
+            font-weight: bold;
+        }
+
+        ul.navbar {
+            font-size: 30px;
+            list-style-type: none;
+            margin-bottom: auto;
+        }
+
+        div.container {
+            margin-top: 20px;
+        }
+
+        .topic {
+            border: 2px solid green;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        td.datetime {
+            color: darkcyan;
+            width: 0;
+            white-space: nowrap;
+        }
+
+        td.author {
+            font-weight: bold;
+            white-space: nowrap;
+            width: 0;
+        }
+    </style>
+    <script type="application/javascript">
+        $().ready(function () {
+            $("ul.navbar").clone().insertAfter($("#content"));
+        });
+
+        function toggle() {
+            $("a.image").each(function (i) {
+                $(this).fadeToggle();
+            });
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+    <div>
+        <h1 style="text-align: center; font-size: 50px;">{{server_name}}</h1>
+        <h2 style="text-align: center; font-size: 40px;">#{{ channel_info["name"] }}</h2>
+        <div style="text-align: center;">A total of {{message_count}} messages archived in this channel.</div>
+        <br>
+        <div class="topic">{% raw markdown(channel_info["topic"]) %}</div>
+    </div>
+    <ul class="navbar">
+        {% if not first_page %}
+        <li><a href="/channel/{% raw channel_id %}">First</a></li>
+        <li><a href="/channel/{% raw channel_id %}?before={% raw msgs[0]['id'] %}">Before</a></li>
+        {% else %}
+        <li>First</li>
+        <li>Before</li>
+        {% end %}
+        <li>
+            <button onclick="toggle()" class="btn" type="button" style="font-size: 30px;">Show/hide attachments</button>
+        </li>
+        {% if not last_page %}
+        <li><a href="/channel/{% raw channel_id %}?after={% raw msgs[-1]['id'] %}">Next</a></li>
+        <li><a href="/channel/{% raw channel_id %}?after={% raw last_id %}">Last</a></li>
+        {% else %}
+        <li>Next</li>
+        <li>Last</li>
+        {% end %}
+    </ul>
+    <span>A total of {{len(msgs)}} messages on this page, </span>
+    <span class="bold-label">from </span>{{format_datetime(msgs[0]["timestamp"])}}<span class="bold-label"> to </span><span>{{format_datetime(msgs[-1]["timestamp"])}}</span>
+    <table class="table" id="content">
+        {% for msg in msgs %}
+        <tr data-msgid="{% raw msg['id'] %}">
+            <td class="datetime"><a href="/message/{% raw msg['id'] %}">{{format_datetime(msg["timestamp"])}}</a></td>
+            <td class="author">{{msg["author"]["username"]}}</td>
+            &nbsp;&nbsp;
+            <td>
+                <span style="font-size: large;">{% raw markdown(msg["content"]) %}</span>
+                {% if msg["attachments"] %}
+                <div class="attachments">
+                    {% for item in msg["attachments"] %}
+                    <div class="attachment">
+                        <span><a href="/attachment/{% raw item['id'] %}">{{item["filename"]}}</a></span><br>
+                        <a href="/res/{% raw item['local_filename'] %}" class="image">
+                            {% if "width" in item or "height" in item %}
+                            <img src="/res/{% raw item['local_filename'] %}" style="max-width: 300px;">
+                            {% else %}
+                            <span>File</span>
+                            {% end %}
+                        </a>
+                    </div>
+                    {% end %}
+                </div>
+                {% end %}
+            </td>
+        </tr>
+        {% end %}
+    </table>
+</div>
+</body>
+</html>

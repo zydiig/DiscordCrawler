@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Crawled channels</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="/static/js/jquery-3.2.1.min.js"></script>
+    <script src="/static/js/popper.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <style>
+        td {
+            font-size: 25px;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 40px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <table class="table">
+        <tr>
+            <th>Server</th>
+            <th>Channel</th>
+        </tr>
+        {% for channel in channels %}
+        <tr>
+            <td style="white-space: nowrap;width: 0;">{{channel['server_name']}}</td>
+            <td><a href="/channel/{% raw channel['id'] %}">#{{channel['name']}}</a></td>
+        </tr>
+        {% end %}
+    </table>
+</div>
+</body>
+</html>

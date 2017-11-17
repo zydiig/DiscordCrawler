@@ -41,4 +41,4 @@ Sample configuration file below.
   }
 }
 ~~~
-Copy and save it as `discord.json`. The script expects the config file in the current working directory (`$PWD`).
+Copy this, make changes according to your needs, and save it as `discord.json`. The script expects the config file in the current working directory (`$PWD`).
