@@ -4,19 +4,17 @@ from os import stat
 from pathlib import Path
 from traceback import print_exc
 
-from pymongo import MongoClient
 from requests import Session
+
+from utils import db_connect
 
 s = Session()
 
 config = json.load(open("discord.json"))
-s.proxies.update(config.get("proxies"))
-if all(key in config["db"] for key in ("username", "password")):
-    c = MongoClient(config["db"]["host"], config["db"]["port"], username=config["db"]["username"], password=config["db"]["password"])
-else:
-    c = MongoClient(config["db"]["host"], config["db"]["port"])
-attachments = c[config["db"]["db_name"]].attachments
-messages = c[config["db"]["db_name"]].messages
+s.proxies.update(config.get("proxies", {}))
+db = db_connect(config)
+attachments = db.attachments
+messages = db.messages
 mapping = {}
 root = Path(config["prefs"].get("save_dest", "discord")).expanduser().resolve()
 
@@ -67,9 +65,9 @@ if __name__ == "__main__":
     total, total_good, total_bad = 0, 0, 0
     for x in messages.find({"attachments": {"$ne": []}}):
         for a in x["attachments"]:
-            total+=1
+            total += 1
             if not check_attachment(attachments.find_one({"id": a["id"]}), a["id"]):
-                total_bad+=1
+                total_bad += 1
             else:
-                total_good+=1
+                total_good += 1
     print(f"Total {total} Good {total_good} Bad {total_bad}")

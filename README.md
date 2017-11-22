@@ -12,6 +12,8 @@ Dependencies
   * requests
   * pymongo
   * python-dateutil
+  * markdown
+  * elasticsearch (not ready for use yet)
 
 Configuration
 -------------

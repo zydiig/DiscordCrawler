@@ -9,9 +9,10 @@ from time import sleep, time
 from traceback import print_exc, format_exc
 
 from dateutil.parser import parse as parse_datetime
-from pymongo import MongoClient
 from requests import Session, post
 from requests.exceptions import Timeout
+
+from utils import db_connect
 
 ENDPOINT = "https://discordapp.com/api/v6"
 
@@ -169,11 +170,7 @@ class ChannelFetcher(Thread):
 
 if __name__ == "__main__":
     config = json.load(open("discord.json"))
-    if all(x in config["db"] for x in ("username", "password")):
-        c = MongoClient(config["db"]["host"], config["db"]["port"], username=config["db"]["username"], password=config["db"]["password"])
-    else:
-        c = MongoClient(config["db"]["host"], config["db"]["port"])
-    db = c[config["db"]["db_name"]]
+    db = db_connect(config)
     if "token" in config and time() - config["token"]["timestamp"] < config["prefs"]["token_lifetime"]:
         token = config["token"]["s"]
     else:
@@ -205,4 +202,3 @@ if __name__ == "__main__":
     finally:
         task_queue.join()
         print("Exiting now.")
-        c.close()

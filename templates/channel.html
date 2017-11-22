@@ -8,7 +8,7 @@
     <script src="/static/js/popper.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
     <style>
-        .bold-label {
+        .label {
             font-weight: bold;
         }
 
@@ -62,7 +62,7 @@
         <div class="topic">{% raw markdown(channel_info["topic"]) %}</div>
     </div>
     <ul class="navbar">
-        {% if not first_page %}
+        {% if not is_first_page %}
         <li><a href="/channel/{% raw channel_id %}">First</a></li>
         <li><a href="/channel/{% raw channel_id %}?before={% raw msgs[0]['id'] %}">Before</a></li>
         {% else %}
@@ -72,7 +72,7 @@
         <li>
             <button onclick="toggle()" class="btn" type="button" style="font-size: 30px;">Show/hide attachments</button>
         </li>
-        {% if not last_page %}
+        {% if not is_last_page %}
         <li><a href="/channel/{% raw channel_id %}?after={% raw msgs[-1]['id'] %}">Next</a></li>
         <li><a href="/channel/{% raw channel_id %}?after={% raw last_id %}">Last</a></li>
         {% else %}
@@ -81,11 +81,16 @@
         {% end %}
     </ul>
     <span>A total of {{len(msgs)}} messages on this page, </span>
-    <span class="bold-label">from </span>{{format_datetime(msgs[0]["timestamp"])}}<span class="bold-label"> to </span><span>{{format_datetime(msgs[-1]["timestamp"])}}</span>
+    <span class="label">from </span>{{format_datetime(msgs[0]["timestamp"])}}<span class="label"> to </span><span>{{format_datetime(msgs[-1]["timestamp"])}}</span>
     <table class="table" id="content">
         {% for msg in msgs %}
         <tr data-msgid="{% raw msg['id'] %}">
-            <td class="datetime"><a href="/message/{% raw msg['id'] %}">{{format_datetime(msg["timestamp"])}}</a></td>
+            <td class="datetime">
+                <a href="/message/{% raw msg['id'] %}">{{format_datetime(msg["timestamp"])}}</a>
+                {% if msg["embeds"] %}
+                *
+                {% end %}
+            </td>
             <td class="author">{{msg["author"]["username"]}}</td>
             &nbsp;&nbsp;
             <td>

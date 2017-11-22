@@ -5,7 +5,9 @@ from pathlib import Path
 import tornado.ioloop
 import tornado.web
 from markdown import markdown
-from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING
+
+from utils import db_connect
 
 
 def srcdir_path(rel_path):
@@ -17,11 +19,11 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_status(status_code)
         self.render(srcdir_path("templates/error.html"), code=status_code)
 
-
-class ChannelHandler(BaseHandler):
     def initialize(self, db):
         self.db = db
 
+
+class ChannelHandler(BaseHandler):
     def get(self, channel_id):
         channel_info = self.db.channels.find_one({"id": channel_id}, sort=[("timestamp", DESCENDING)])
         if not channel_info:
@@ -30,37 +32,43 @@ class ChannelHandler(BaseHandler):
         after = self.get_argument("after", default=None)
         before = self.get_argument("before", default=None)
         limit = self.get_argument("limit", default=100)
-        first_page = False
+
+        def get_message(query, nullable=False, **kwargs):
+            query.update({"channel_id": channel_id})
+            ret = self.db.messages.find_one(query, **kwargs)
+            if not ret and not nullable:
+                print(query)
+                raise tornado.web.HTTPError(404)
+            else:
+                return ret
+
+        def get_messages(query, **kwargs):
+            query.update({"channel_id": channel_id})
+            return self.db.messages.find(query, **kwargs)
+
         if after:
-            dt_limit = self.db.messages.find_one({"id": after, "channel_id": channel_id})["timestamp"]
-            messages = self.db.messages.find({"timestamp": {"$gt": dt_limit}, "channel_id": channel_id}, limit=limit, sort=[("timestamp", ASCENDING)])
+            dt_limit = get_message({"id": after})["timestamp"]
+            messages = list(get_messages({"timestamp": {"$gt": dt_limit}}, limit=limit, sort=[("timestamp", ASCENDING)]))
         elif before:
-            dt_limit = self.db.messages.find_one({"id": before, "channel_id": channel_id})["timestamp"]
-            messages = self.db.messages.find({"timestamp": {"$lt": dt_limit}, "channel_id": channel_id}, limit=limit,
-                                             sort=[("timestamp", DESCENDING)])
-            messages = reversed(list(messages))
+            dt_limit = get_message({"id": before})["timestamp"]
+            messages = list(reversed(list(get_messages({"timestamp": {"$lt": dt_limit}}, limit=limit, sort=[("timestamp", DESCENDING)]))))
         else:
-            messages = self.db.messages.find({"channel_id": channel_id}, limit=limit, sort=[("timestamp", ASCENDING)])
-            first_page = True
-        messages = list(messages)
-        message_count = self.db.messages.find({"channel_id": channel_id}).count()
-        last_message = list(self.db.messages.find({"channel_id": channel_id}, limit=message_count % limit + 1, sort=[("timestamp", DESCENDING)]))[-1]
-        last_page = self.db.messages.find_one({"channel_id": channel_id, "timestamp": {"$gt": messages[-1]["timestamp"]}}) is None
-        if not first_page:
-            first_page = self.db.messages.find_one({"channel_id": channel_id, "timestamp": {"$lt": messages[0]["timestamp"]}}) is None
+            messages = list(get_messages({}, limit=limit, sort=[("timestamp", ASCENDING)]))
+        message_count = get_messages({}).count()
+        last_page_lower_bound = list(get_messages({}, limit=message_count % limit + 1, sort=[("timestamp", DESCENDING)]))[-1]
+        is_last_page = get_message({"timestamp": {"$gt": messages[-1]["timestamp"]}}, nullable=True) is None
+        is_first_page = get_message({"timestamp": {"$lt": messages[0]["timestamp"]}}, nullable=True) is None
         for message in messages:
             for item in message.get("attachments", []):
                 item["local_filename"] = self.db.attachments.find_one({"id": item["id"]})["local_filename"]
 
-        self.render(srcdir_path("templates/channel.html"), msgs=list(messages), last_id=last_message["id"],
-                    format_datetime=lambda x: x.strftime("%Y-%m-%d %H:%M:%S"), channel_id=channel_id, first_page=first_page, last_page=last_page,
+        self.render(srcdir_path("templates/channel.html"), msgs=messages, last_id=last_page_lower_bound["id"],
+                    format_datetime=lambda x: x.strftime("%Y-%m-%d %H:%M:%S"), channel_id=channel_id, is_first_page=is_first_page,
+                    is_last_page=is_last_page,
                     channel_info=channel_info, markdown=markdown, message_count=message_count, server_name=server_name)
 
 
 class MainHandler(BaseHandler):
-    def initialize(self, db):
-        self.db = db
-
     def get(self):
         channels = []
         for idx in self.db.channels.distinct("id"):
@@ -71,17 +79,11 @@ class MainHandler(BaseHandler):
 
 
 class AttachmentHandler(BaseHandler):
-    def initialize(self, db):
-        self.db = db
-
     def get(self, idx):
         self.render(srcdir_path("templates/attachment.html"), data=self.db.attachments.find_one({"id": idx}))
 
 
 class MessageHandler(BaseHandler):
-    def initialize(self, db):
-        self.db = db
-
     def get(self, idx):
         msg = self.db.messages.find_one({"id": idx})
         attachments = []
@@ -103,11 +105,7 @@ def make_app(db, static_path):
 
 if __name__ == "__main__":
     config = json.load(open("discord.json"))
-    if all(key in config["db"] for key in ("username", "password")):
-        c = MongoClient(config["db"]["host"], config["db"]["port"], username=config["db"]["username"], password=config["db"]["password"])
-    else:
-        c = MongoClient(config["db"]["host"], config["db"]["port"])
-    db = c[config["db"]["db_name"]]
+    db = db_connect(config)
     app = make_app(db, str(Path(config["prefs"].get("save_dest", "discord")).expanduser().resolve()))
     app.listen(8888)
     tornado.ioloop.IOLoop.current().start()
