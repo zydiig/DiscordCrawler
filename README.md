@@ -34,12 +34,12 @@ Sample configuration file below.
     "save_dest":"discord"
   },
   "target": {
-    "channel_id": "<YOUR CHANNEL ID HERE>"
+    "channel_ids": [<LIST OF YOUR CHANNEL IDS HERE>]
   },
   "db": {
     "host": "localhost",
     "port": 27017,
-    "db_name": "ddlc"
+    "db_name": "discord"
   }
 }
 ~~~
